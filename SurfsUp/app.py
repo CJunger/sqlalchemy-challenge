@@ -116,23 +116,35 @@ def tobs():
 
 
 @app.route("/api/v1.0/<start>")
-def temps(start):
+@app.route("/api/v1.0/<start>/<end>")
+def temps(start=None, end=None):
     #Create our session (link) from Python to the DB
     session = Session(engine)
 
     # Return a JSON list of the minimum temperature, 
     # the average temperature, and the maximum temperature for a specified start or start-end range.
     
-    mins_max_avg = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)).filter(Measurement.date >= start).all()
+    sel = [func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
+    if not end: 
+        start = dt.datetime.strptime(start, "%m%d%Y")
+        results = session.query(*sel).\
+                filter(Measurement.date>=start).all()
+        session.close()
     
-    
-    session.close()
-    
+
     # Convert list of tuples into normal list
-    json_tob = list(np.ravel(mins_max_avg))
+        json_tob = list(np.ravel(results))
 
-    return jsonify(json_tob)
 
+
+        start = dt.datetime.strptime(start, "%m%d%Y")
+        end = dt.datetime.strptime(end, "%m%d%Y")
+
+    
+
+    results = session.query(*sel).\
+        filter(Measurement.date>=start).\
+        filter(Measurement.date<=end).all()
 # @app.route("/api/v1.0/<start>/<end>")
 # def temps_range(startend):
 #     #Create our session (link) from Python to the DB
@@ -143,12 +155,12 @@ def temps(start):
 #     begin_end = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)).filter(Measurement.date >= startend).all()
     
     
-#     session.close()
+    session.close()
     
 #     # Convert list of tuples into normal list
-#     json_tob = list(np.ravel(mins_max_avg))
+    json_tob = list(np.ravel(results))
 
-#     return jsonify(json_tob)
+    return jsonify(json_tob)
 
 if __name__ == "__main__":
     app.run(debug=True)
